@@ -1,50 +1,30 @@
-import argparse
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from data_preprocessing import load_and_clean_data, scale_features
+from models import train_decision_tree, train_logistic_regression
+from evaluation import evaluate_model
+from visualization import plot_departure_reasons, plot_correlation_heatmap
 
-import missingvalues
-import preprocessing_smote 
-import SMOTE_from_scratch
-import visualisation
+# Charger et préparer les données
+df = load_and_clean_data("HR_Analytics.csv")
 
-#(comparaison sklearn)
-try:
-    import sklearn_comparaison
-    HAS_SKLEARN = True
-except Exception:
-    HAS_SKLEARN = False
+X = df.drop("Attrition", axis=1)
+y = df["Attrition"]
 
+# Split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)
 
-def main():
-    parser = argparse.ArgumentParser(description="Pipeline ML - HR Attrition")
-    parser.add_argument("--step", type=str, default="all",
-                        choices=["A", "B", "C", "D", "E", "SK", "all"],
-                        help="Choisir une étape à exécuter ou all.")
-    args = parser.parse_args()
+# Scaling pour Logistic Regression
+X_train_scaled, X_test_scaled = scale_features(X_train, X_test)
 
-    if args.step in ["A", "all"]:
-        print("\n=== Étape A: EDA + Cleaning ===")
-        missingvalues.run()
+# Entraînement
+dt_model = train_decision_tree(X_train, y_train)
+lr_model = train_logistic_regression(X_train_scaled, y_train)
 
-    if args.step in ["B", "all"]:
-        print("\n=== Étape B: Split + Standardisation ===")
-        preprocessing_smote .run()
+# Évaluation
+evaluate_model(dt_model, X_test, y_test, "Decision Tree")
+evaluate_model(lr_model, X_test_scaled, y_test, "Logistic Regression")
 
-    if args.step in ["C", "all"]:
-        print("\n=== Étape C: SMOTE from scratch ===")
-        SMOTE_from_scratch.run()
-
-  
-
-    if args.step in ["E", "all"]:
-        print("\n=== Étape E: Évaluation + Visualisation ===")
-        visualisation.run()
-
-    if args.step in ["SK", "all"]:
-        if not HAS_SKLEARN:
-            print("\n[WARN] sklearn_comparaison.py introuvable ou sklearn non installé.")
-        else:
-            print("\n=== Comparaison sklearn ===")
-            sklearn_comparaison.run()
-
-
-if __name__ == "__main__":
-    main()
+# Visualisations
+plot_departure_reasons(df)
+plot_correlation_heatmap(df)
